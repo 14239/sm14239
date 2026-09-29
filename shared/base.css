@@ -90,3 +90,7 @@ select, input[type='text'], input[type='number'], input:not([type]) {
 
 .error { color: var(--accent); margin: 0; }
 details > summary { cursor: pointer; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.tab { border: 0; background: none; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 600; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }

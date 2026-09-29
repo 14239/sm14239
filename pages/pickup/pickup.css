@@ -1,0 +1,15 @@
+.pickup .scenario-info { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.pickup .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; }
+.pickup .stats > div { display: flex; flex-direction: column; }
+.pickup .stats b { font-size: 22px; }
+.pickup .reasons { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 0; font-size: 14px; }
+.pickup .sim-log { font-size: 13px; line-height: 1.5; max-height: 480px; overflow-y: auto; padding-left: 48px; margin: 8px 0 0; }
+.pickup .sim-log .turn { margin-top: 6px; font-weight: 700; }
+.pickup .sim-log .hot { color: var(--accent); }
+.pp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.pp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pp-row > input { width: 120px; }
+.pp-row .pp-value input { width: 60px; }
+.pp-row .pp-value b { font-size: 20px; display: inline-block; min-width: 28px; text-align: right; }
+.pp-row.empty .pp-value b { color: var(--accent); }
+.pp-row .btn { padding: 4px 10px; }
