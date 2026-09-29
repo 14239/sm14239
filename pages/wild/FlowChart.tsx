@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type PointerEvent, type WheelEvent } from 'react'
+import { useEffect, useMemo, useRef, type PointerEvent } from 'react'
 import type { WildFlow } from './flow'
 
 const NODE_H = 60
@@ -34,41 +34,73 @@ export function FlowChart({ flow, pathNodes, pathEdges, selected, onToggle, chro
     return { pos, box }
   }, [flow])
 
-  const [view, setView] = useState(layout.box)
+  // 확대/이동은 React 렌더 없이 viewBox 속성만 바꾼다 (노드가 많아 매번 다시 그리면 마우스를 못 따라감)
   const svgRef = useRef<SVGSVGElement>(null)
-  const drag = useRef<{ x: number; y: number; view: typeof view; moved: boolean } | null>(null)
+  const view = useRef(layout.box)
+  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const dragged = useRef(false)
 
-  const toSvg = (clientX: number, clientY: number) => {
+  const apply = () => {
+    const v = view.current
+    svgRef.current?.setAttribute('viewBox', `${v.x} ${v.y} ${v.w} ${v.h}`)
+  }
+  const reset = () => {
+    view.current = layout.box
+    apply()
+  }
+  useEffect(reset, [layout]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 화면 1px 당 SVG 단위 (preserveAspectRatio meet 기준) */
+  const unitsPerPx = () => {
     const rect = svgRef.current!.getBoundingClientRect()
-    return { x: view.x + ((clientX - rect.left) / rect.width) * view.w, y: view.y + ((clientY - rect.top) / rect.height) * view.h }
+    return Math.max(view.current.w / rect.width, view.current.h / rect.height)
+  }
+  const toSvg = (clientX: number, clientY: number) => {
+    const pt = new DOMPoint(clientX, clientY).matrixTransform(svgRef.current!.getScreenCTM()!.inverse())
+    return { x: pt.x, y: pt.y }
   }
 
-  const onWheel = (e: WheelEvent) => {
-    const f = e.deltaY > 0 ? 1.15 : 1 / 1.15
-    const p = toSvg(e.clientX, e.clientY)
-    const w = Math.min(layout.box.w * 2, Math.max(300, view.w * f))
-    const k = w / view.w
-    setView({ x: p.x - (p.x - view.x) * k, y: p.y - (p.y - view.y) * k, w, h: view.h * k })
-  }
+  // 휠은 passive가 아닌 네이티브 리스너로 받아야 페이지 스크롤을 막을 수 있다
+  useEffect(() => {
+    const svg = svgRef.current!
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const v = view.current
+      const f = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 200) * 0.0015)
+      const w = Math.min(layout.box.w * 2, Math.max(300, v.w * f))
+      const k = w / v.w
+      const p = toSvg(e.clientX, e.clientY)
+      view.current = { x: p.x - (p.x - v.x) * k, y: p.y - (p.y - v.y) * k, w, h: v.h * k }
+      apply()
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [layout]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const onPointerDown = (e: PointerEvent) => {
-    drag.current = { x: e.clientX, y: e.clientY, view, moved: false }
+    drag.current = { x: e.clientX, y: e.clientY, moved: false }
+    dragged.current = false
   }
   const onPointerMove = (e: PointerEvent) => {
     const d = drag.current
     if (!d) return
-    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) {
-      if (!d.moved) (e.currentTarget as Element).setPointerCapture(e.pointerId)
+    if (!d.moved) {
+      if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 4) return
       d.moved = true
+      dragged.current = true
+      ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
     }
-    if (!d.moved) return
-    const rect = svgRef.current!.getBoundingClientRect()
-    setView({ ...d.view, x: d.view.x - ((e.clientX - d.x) / rect.width) * d.view.w, y: d.view.y - ((e.clientY - d.y) / rect.height) * d.view.h })
+    const u = unitsPerPx()
+    view.current = { ...view.current, x: view.current.x - (e.clientX - d.x) * u, y: view.current.y - (e.clientY - d.y) * u }
+    d.x = e.clientX
+    d.y = e.clientY
+    apply()
   }
   const endDrag = () => {
     drag.current = null
   }
   const click = (id: number) => {
-    if (!drag.current?.moved) onToggle(id)
+    if (!dragged.current) onToggle(id)
   }
 
   const onPath = new Set(pathNodes)
@@ -101,8 +133,7 @@ export function FlowChart({ flow, pathNodes, pathEdges, selected, onToggle, chro
     <div className={chroma ? 'flow-wrap chroma' : 'flow-wrap'}>
       <svg
         ref={svgRef}
-        viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-        onWheel={onWheel}
+        viewBox={`${layout.box.x} ${layout.box.y} ${layout.box.w} ${layout.box.h}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
@@ -129,7 +160,7 @@ export function FlowChart({ flow, pathNodes, pathEdges, selected, onToggle, chro
           )
         })}
       </svg>
-      <button className="flow-reset" onClick={() => setView(layout.box)}>전체 보기</button>
+      <button className="flow-reset" onClick={reset}>전체 보기</button>
     </div>
   )
 }

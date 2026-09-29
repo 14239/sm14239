@@ -18,8 +18,8 @@ export const pages: PageInfo[] = [
   },
   {
     slug: 'pickup',
-    title: '줍기 시뮬레이터',
-    description: '과사열매 + 줍기 무한 PP 전략 시뮬레이션 (망망이·두르쥐 VS 해피너스), PP 카운터',
+    title: '픽업 시뮬레이터',
+    description: '과사열매 + 픽업 무한 PP 전략 시뮬레이션 (망망이·두르쥐 VS 해피너스), PP 카운터',
   },
   {
     slug: 'wild',

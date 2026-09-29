@@ -1,15 +1,15 @@
 # SM14239
 
-유튜브 [SM14239](https://www.youtube.com/@SM14239) 관련 웹 도구 모음. → https://14239.github.io/sm14239/
+유튜브 [SM14239](https://www.youtube.com/@SM14239) 관련 웹 도구 모음.
 
 ## 구조
 
 ```
-pages/            페이지 (폴더 하나 = 페이지 하나, URL /sm14239/<폴더>/)
+pages/            페이지 (폴더 하나 = 페이지 하나, URL /<폴더>/)
   index.html      허브
   moveset/        포켓몬 검색 (타입·특성·기술 조건, 상세 창, 기술 이름→ID 도구)
   party/          파티 검색 (슬롯 조건 + Any 조건 자동 배치)
-  pickup/         줍기 시뮬레이터 4종 + PP 카운터
+  pickup/         픽업 시뮬레이터 4종 + PP 카운터
   wild/           야생 테이블(출현 CSV → 레벨별 기술표) + 야생 시뮬레이션(올리르바 플로우차트)
 shared/           공통 레이아웃·스타일·데이터 로더
 public/data/      페이지용 JSON (scripts/build_data.py 가 생성)
@@ -20,11 +20,12 @@ scripts/          데이터 변환 스크립트
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173/sm14239/
+npm run dev       # http://localhost:5173/
 npm run build
 ```
 
 `main`에 push하면 GitHub Actions가 빌드해서 Pages에 배포한다.
+배포 경로는 자동으로 맞춰진다: 리포 이름이 `14239.github.io`거나 커스텀 도메인이면 루트(`/`), 그 외엔 `/<리포이름>/`.
 
 ## 새 페이지 추가
 

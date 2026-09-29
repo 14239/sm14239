@@ -15,7 +15,7 @@ export function App() {
   return (
     <div className="pickup stack">
       <div className="tabs">
-        <button className={tab === 'sim' ? 'tab active' : 'tab'} onClick={() => setTab('sim')}>줍기 시뮬레이터</button>
+        <button className={tab === 'sim' ? 'tab active' : 'tab'} onClick={() => setTab('sim')}>픽업 시뮬레이터</button>
         <button className={tab === 'pp' ? 'tab active' : 'tab'} onClick={() => setTab('pp')}>PP 카운터</button>
       </div>
       {tab === 'sim' ? <Simulator /> : <PPCounter />}

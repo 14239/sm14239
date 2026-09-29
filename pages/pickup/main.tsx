@@ -3,7 +3,7 @@ import { mount } from '@shared/mount'
 import { App } from './App'
 
 mount(
-  <Layout title="줍기 시뮬레이터">
+  <Layout title="픽업 시뮬레이터">
     <App />
   </Layout>,
 )

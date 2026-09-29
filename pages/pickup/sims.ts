@@ -1,4 +1,4 @@
-// 줍기(과사열매) 무한 PP 시뮬레이션. Blazor 원본(Pickup-Simulation1~4)의 로직을 그대로 옮겼다.
+// 픽업(과사열매) 무한 PP 시뮬레이션. Blazor 원본(Pickup-Simulation1~4)의 로직을 그대로 옮겼다.
 // 각 시나리오는 한 판을 끝까지 돌리고 (끝난 턴, 종료 사유, 로그)를 돌려준다.
 
 class Move {
