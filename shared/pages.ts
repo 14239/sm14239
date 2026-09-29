@@ -8,7 +8,7 @@ export interface PageInfo {
 export const pages: PageInfo[] = [
   {
     slug: 'moveset',
-    title: '기술 역검색',
-    description: '고른 기술을 전부 배울 수 있는 포켓몬을 버전별로 찾기',
+    title: '포켓몬 검색',
+    description: '버전별로 타입·특성·기술 조건에 맞는 포켓몬 찾기',
   },
 ]

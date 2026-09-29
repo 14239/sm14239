@@ -1,16 +1,5 @@
-.moveset .controls { display: flex; flex-direction: column; gap: 12px; }
-.moveset label { display: flex; gap: 8px; align-items: center; }
-.moveset select, .moveset input {
-  padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); min-width: 0;
-}
-.moveset .picked { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.moveset .chip {
-  border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 999px; padding: 4px 12px; cursor: pointer;
-}
-.moveset .search { position: relative; }
-.moveset .suggest { position: absolute; z-index: 1; top: 100%; left: 0; margin: 4px 0 0; padding: 4px; list-style: none; min-width: 220px; }
-.moveset .suggest button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
-.moveset .suggest button:hover { background: var(--bg); }
-.moveset .results { list-style: none; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.moveset .results .card { padding: 10px 12px; }
-.moveset .error { margin: 0; color: var(--accent); }
+.moveset .filters { display: flex; flex-wrap: wrap; gap: 16px; }
+.moveset .methods { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 0; }
+.moveset .hit-list { font-size: 13px; }
+.moveset .lookup { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.moveset textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font: inherit; }

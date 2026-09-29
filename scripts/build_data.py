@@ -2,6 +2,7 @@
 
 PokeAPI의 REST API는 호출하지 않는다. GitHub에 올라온 CSV 원본을 고정 커밋 기준으로
 한 번만 내려받아(scripts/.cache) 필요한 필드만 뽑아 public/data/ 에 쓴다.
+출력 형식은 shared/data.ts 의 타입 정의와 맞춘다.
 
 사용법:
     python scripts/build_data.py            # POKEAPI_COMMIT 기준으로 생성
@@ -28,6 +29,17 @@ OUT = ROOT / "public" / "data"
 FILES = [
     "pokemon.csv",
     "pokemon_species_names.csv",
+    "pokemon_forms.csv",
+    "pokemon_form_names.csv",
+    "pokemon_types.csv",
+    "pokemon_types_past.csv",
+    "pokemon_abilities.csv",
+    "pokemon_abilities_past.csv",
+    "pokemon_stats.csv",
+    "types.csv",
+    "type_names.csv",
+    "abilities.csv",
+    "ability_names.csv",
     "moves.csv",
     "move_names.csv",
     "pokemon_moves.csv",
@@ -53,15 +65,24 @@ def read_csv(commit: str, name: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8"))))
 
 
-def names_by(rows: list[dict], key: str) -> dict[str, dict[str, str]]:
+def names_by(rows: list[dict], key: str, col: str = "name") -> dict[str, dict[str, str]]:
     """{id: {"ko": .., "en": ..}}"""
     out: dict[str, dict[str, str]] = defaultdict(dict)
     for r in rows:
-        if r["local_language_id"] == LANG_KO:
-            out[r[key]]["ko"] = r["name"]
-        elif r["local_language_id"] == LANG_EN:
-            out[r[key]]["en"] = r["name"]
+        if r["local_language_id"] == LANG_KO and r[col]:
+            out[r[key]]["ko"] = r[col]
+        elif r["local_language_id"] == LANG_EN and r[col]:
+            out[r[key]]["en"] = r[col]
     return out
+
+
+def ko_en(n: dict, fallback: str) -> list[str]:
+    en = n.get("en", fallback)
+    return [n.get("ko", en), en]
+
+
+def num(v: str):
+    return int(v) if v else None
 
 
 def write(path: Path, data) -> None:
@@ -73,26 +94,74 @@ def main() -> None:
     commit = latest_commit() if "--latest" in sys.argv else POKEAPI_COMMIT
     t = {name: read_csv(commit, name) for name in FILES}
 
-    # 포켓몬: id -> [한글명, 영문명, 도감번호]. 폼(id>10000)은 영문 identifier를 덧붙인다.
-    species = names_by(t["pokemon_species_names.csv"], "pokemon_species_id")
-    pokemon = {}
-    for r in t["pokemon.csv"]:
-        n = species.get(r["species_id"], {})
-        ko, en = n.get("ko", n.get("en", r["identifier"])), n.get("en", r["identifier"])
-        if int(r["id"]) > 10000:
-            form = r["identifier"].split("-", 1)[-1]
-            ko, en = f"{ko} ({form})", f"{en} ({form})"
-        pokemon[int(r["id"])] = [ko, en, int(r["species_id"])]
+    # ── 타입: id -> [한글, 영문]  (1~18 실제 타입만)
+    tnames = names_by(t["type_names.csv"], "type_id")
+    types = {int(r["id"]): ko_en(tnames[r["id"]], r["identifier"])
+             for r in t["types.csv"] if int(r["id"]) <= 18}
 
-    # 기술: id -> [한글명, 영문명, 타입id, 등장세대]
+    # ── 특성: id -> [한글, 영문, 등장세대]  (본가 특성만)
+    anames = names_by(t["ability_names.csv"], "ability_id")
+    abilities = {int(r["id"]): ko_en(anames[r["id"]], r["identifier"]) + [int(r["generation_id"])]
+                 for r in t["abilities.csv"] if r["is_main_series"] == "1"}
+
+    # ── 기술: id -> [한글, 영문, 타입, 세대, 위력, PP, 명중, 우선도, 분류(1변화 2물리 3특수)]
     mnames = names_by(t["move_names.csv"], "move_id")
     moves = {}
     for r in t["moves.csv"]:
-        n = mnames.get(r["id"], {})
-        moves[int(r["id"])] = [n.get("ko", n.get("en", r["identifier"])), n.get("en", r["identifier"]),
-                               int(r["type_id"] or 0), int(r["generation_id"])]
+        moves[int(r["id"])] = ko_en(mnames[r["id"]], r["identifier"]) + [
+            int(r["type_id"] or 0), int(r["generation_id"]), num(r["power"]), num(r["pp"]),
+            num(r["accuracy"]), int(r["priority"] or 0), int(r["damage_class_id"] or 0)]
 
-    # 버전 그룹: [{id, gen, identifier, ko, en}]
+    # ── 포켓몬
+    species = names_by(t["pokemon_species_names.csv"], "pokemon_species_id")
+    form_names = names_by(t["pokemon_form_names.csv"], "pokemon_form_id", "form_name")
+    default_form = {r["pokemon_id"]: r["id"] for r in t["pokemon_forms.csv"] if r["is_default"] == "1"}
+
+    ptypes = defaultdict(dict)
+    for r in t["pokemon_types.csv"]:
+        ptypes[r["pokemon_id"]][int(r["slot"])] = int(r["type_id"])
+    ptypes_past = defaultdict(lambda: defaultdict(dict))  # pid -> gen -> slot -> type
+    for r in t["pokemon_types_past.csv"]:
+        ptypes_past[r["pokemon_id"]][int(r["generation_id"])][int(r["slot"])] = int(r["type_id"])
+
+    pabil = defaultdict(dict)
+    for r in t["pokemon_abilities.csv"]:
+        pabil[r["pokemon_id"]][int(r["slot"])] = int(r["ability_id"])
+    pabil_past = defaultdict(list)
+    for r in t["pokemon_abilities_past.csv"]:
+        pabil_past[r["pokemon_id"]].append([int(r["generation_id"]), int(r["slot"]), int(r["ability_id"] or 0)])
+
+    pstats = defaultdict(lambda: [0] * 6)
+    for r in t["pokemon_stats.csv"]:
+        pstats[r["pokemon_id"]][int(r["stat_id"]) - 1] = int(r["base_stat"])
+
+    pokemon = {}
+    for r in t["pokemon.csv"]:
+        pid = r["id"]
+        n = species.get(r["species_id"], {})
+        name = ko_en(n, r["identifier"])
+        if int(pid) > 10000:
+            fn = form_names.get(default_form.get(pid, ""), {})
+            suffix = ko_en(fn, r["identifier"].split("-", 1)[-1])
+            # "메가리자몽X"처럼 폼 이름에 종 이름이 이미 들어 있으면 폼 이름만 쓴다
+            name = [s if base in s else f"{base} ({s})" for base, s in zip(name, suffix)]
+        entry = {
+            "n": name,
+            "i": r["identifier"],
+            "s": int(r["species_id"]),
+            "t": [ptypes[pid][k] for k in sorted(ptypes[pid])],
+            "a": [pabil[pid].get(1, 0), pabil[pid].get(2, 0), pabil[pid].get(3, 0)],
+            "st": pstats[pid],
+        }
+        if pid in ptypes_past:
+            entry["pt"] = [[g] + [slots[k] for k in sorted(slots)] for g, slots in sorted(ptypes_past[pid].items())]
+        if pid in pabil_past:
+            entry["pa"] = sorted(pabil_past[pid])
+        if r["is_default"] != "1":
+            entry["f"] = 1
+        pokemon[int(pid)] = entry
+
+    # ── 버전 그룹: [{id, gen, identifier, ko, en, hasLearnset}]
     vnames = names_by(t["version_names.csv"], "version_id")
     vg_versions = defaultdict(list)
     for r in t["versions.csv"]:
@@ -108,21 +177,32 @@ def main() -> None:
             "en": " / ".join(v.get("en", "?") for v in vs),
         })
 
-    # 버전 그룹별 기술 습득표: {pokemonId: [[moveId, methodId, level], ...]}
-    learn: dict[str, dict[int, set]] = defaultdict(lambda: defaultdict(set))
+    # ── 버전 그룹별 기술 습득표: {pokemonId: [[moveId, methodId, level], ...]}
+    #    (방법, 레벨, 게임 내 순서)로 정렬 → 레벨업 기술은 배우는 순서 그대로
+    learn: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
     for r in t["pokemon_moves.csv"]:
-        learn[r["version_group_id"]][int(r["pokemon_id"])].add(
-            (int(r["move_id"]), int(r["pokemon_move_method_id"]), int(r["level"] or 0)))
+        learn[r["version_group_id"]][int(r["pokemon_id"])].append(
+            (int(r["pokemon_move_method_id"]), int(r["level"] or 0), int(r["order"] or 0), int(r["move_id"])))
 
-    # PokeAPI에 버전은 등록됐지만 습득표가 아직 없는 경우(신작·DLC)를 표시
     for g in groups:
+        # PokeAPI에 버전은 등록됐지만 습득표가 아직 없는 경우(신작·DLC)를 표시
         g["hasLearnset"] = str(g["id"]) in learn
 
-    write(OUT / "pokemon.json", pokemon)
+    write(OUT / "types.json", types)
+    write(OUT / "abilities.json", abilities)
     write(OUT / "moves.json", moves)
+    write(OUT / "pokemon.json", pokemon)
     write(OUT / "version-groups.json", groups)
     for vg, table in learn.items():
-        write(OUT / "learnsets" / f"{vg}.json", {p: sorted(m) for p, m in sorted(table.items())})
+        out = {}
+        for p, rows in sorted(table.items()):
+            seen, lst = set(), []
+            for method, level, _, move in sorted(rows):
+                if (move, method, level) not in seen:
+                    seen.add((move, method, level))
+                    lst.append([move, method, level])
+            out[p] = lst
+        write(OUT / "learnsets" / f"{vg}.json", out)
     write(OUT / "meta.json", {"pokeapiCommit": commit})
 
     total = sum(f.stat().st_size for f in OUT.rglob("*.json"))
