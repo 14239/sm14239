@@ -114,6 +114,10 @@ def main() -> None:
         learn[r["version_group_id"]][int(r["pokemon_id"])].add(
             (int(r["move_id"]), int(r["pokemon_move_method_id"]), int(r["level"] or 0)))
 
+    # PokeAPI에 버전은 등록됐지만 습득표가 아직 없는 경우(신작·DLC)를 표시
+    for g in groups:
+        g["hasLearnset"] = str(g["id"]) in learn
+
     write(OUT / "pokemon.json", pokemon)
     write(OUT / "moves.json", moves)
     write(OUT / "version-groups.json", groups)

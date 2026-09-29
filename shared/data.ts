@@ -11,6 +11,8 @@ export interface VersionGroup {
   identifier: string
   ko: string
   en: string
+  /** false면 PokeAPI에 기술 습득 데이터가 아직 없음 (learnsets/<id>.json 없음) */
+  hasLearnset: boolean
 }
 /** pokemonId -> [moveId, methodId, level][] */
 export type Learnset = Record<string, [number, number, number][]>

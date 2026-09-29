@@ -16,18 +16,20 @@ export function App() {
   const [learnset, setLearnset] = useState<Learnset | null>(null)
   const [picked, setPicked] = useState<number[]>([])
   const [query, setQuery] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([loadVersionGroups(), loadPokemon(), loadMoves()]).then(([g, p, m]) => {
       setGroups(g)
       setPokemon(p)
       setMoves(m)
-    })
+    }).catch((e) => setError(String(e)))
   }, [])
 
   useEffect(() => {
     setLearnset(null)
-    loadLearnset(vg).then(setLearnset)
+    setError(null)
+    loadLearnset(vg).then(setLearnset).catch(() => setError('이 버전의 기술 데이터를 불러오지 못했습니다.'))
   }, [vg])
 
   // 이 버전에서 배울 수 있는 기술만 후보로
@@ -69,7 +71,9 @@ export function App() {
           버전
           <select value={vg} onChange={(e) => setVg(Number(e.target.value))}>
             {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.gen}세대 · {g.ko}</option>
+              <option key={g.id} value={g.id} disabled={!g.hasLearnset}>
+                {g.gen}세대 · {g.ko}{g.hasLearnset ? '' : ' (데이터 없음)'}
+              </option>
             ))}
           </select>
         </label>
@@ -84,7 +88,7 @@ export function App() {
             <div className="search">
               <input
                 value={query}
-                placeholder={learnset ? '기술 이름 (한/영)' : '불러오는 중…'}
+                placeholder={learnset ? '기술 이름 (한/영)' : error ? '불러오기 실패' : '불러오는 중…'}
                 disabled={!learnset}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && suggestions[0] && pick(suggestions[0])}
@@ -103,6 +107,7 @@ export function App() {
             </div>
           )}
         </div>
+        {error && <p className="error">{error}</p>}
       </div>
 
       {picked.length > 0 && (
